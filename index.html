@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+@import url(https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300|Josefin+Slab|Arvo|Lato|Vollkorn|Abril+Fatface|Old+Standard+TT|Droid+Sans|Lobster|Inconsolata|Montserrat|Playfair+Display|Karla|Alegreya|Libre+Baskerville|Merriweather|Lora|Archivo+Narrow|Neuton|Signika|Questrial|Fjalla+One|Bitter|Varela+Round);
+
+.background {
+  fill: #fff;
+  pointer-events: all;
+}
+
+.map-layer {
+/*  fill: #fff;
+  stroke: #aaa;*/
+}
+
+.effect-layer{
+  pointer-events:none;
+}
+
+text{
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-weight: 300;
+}
+
+text.neighborhood-text{
+  font-size: 25px;
+  font-weight: 400;
+}
+
+text.title-text{
+  font-size: 30px;
+  font-weight: 400;
+}
+
+.effect-layer text, text.dummy-text{
+  font-size: 12px;
+}
+
+</style>
+<body>
+
+<svg></svg>
+
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script>
+
+//colors
+var backgroundColor = '#fff'
+var unhighligtedColor = '#3ECCB1'
+var selectedColor = '#FD2C1F'
+var mouseOverColor = '#FF6258'
+var textColorLight = '#BAE2DA'
+var textColorDark = '#2FA68F'
+var rangeFactor = 1000
+var strokeWeight = .5
+
+var width = 960,
+    height = 500,
+    centered;
+
+// Define color scale
+var color = d3.scale.linear()
+  .domain([1, 20])
+  .clamp(true)
+  .range([backgroundColor, unhighligtedColor]);
+
+var textColor = d3.scale.linear()
+  .domain([1, 20])
+  .clamp(true)
+  .range([textColorLight, textColorDark]);
+
+var projection = d3.geo.mercator()
+  .scale(110000)
+  // Center the Map in Pittsburgh
+  .center([-79.97, 40.433])
+  .translate([width / 2, height / 2]);
+
+var path = d3.geo.path()
+  .projection(projection);
+
+// Set svg width & height
+var svg = d3.select('svg')
+  .attr('width', width)
+  .attr('height', height);
+
+// Add background
+svg.append('rect')
+  .attr('class', 'background')
+  .attr('width', width)
+  .attr('height', height)
+  .on('click', clicked);
+
+var g = svg.append('g');
+
+var effectLayer = g.append('g')
+  .classed('effect-layer', true);
+
+var mapLayer = g.append('g')
+  .classed('map-layer', true);
+
+var dummyText = g.append('text')
+  .classed('dummy-text', true)
+  .attr('x', 10)
+  .attr('y', 30)
+  .style('opacity', 0);
+
+var neighborhoodName = g.append('text')
+  .classed('neighborhood-text', true)
+  .attr('x', 20)
+  .attr('y', 80)
+  .attr('text-anchor', 'left');
+
+var title = g.append('text')
+  .classed('title-text', true)
+  .attr('x', 20)
+  .attr('y', 45)
+  .attr('text-anchor', 'left')
+  .text("Pittsburgh's Neighborhoods")
+  .style('font-family', 'Lato')
+  .style('fill', '#616161');
+
+
+// var neighborhoodName = g.append('text')
+//   .classed('neighborhood-text', true)
+//   .attr('x', 20)
+//   .attr('y', 45)
+//   .attr('text-anchor', 'left');
+
+// Load map data
+d3.json('Pittsburgh.geo.json', function(error, mapData) {
+  var features = mapData.features;
+  // Update color scale domain based on data
+  color.domain([0, d3.max(features, nameLength)]);
+  // Draw each neighborhood as a path
+  mapLayer.selectAll('path')
+      .data(features)
+      .enter().append('path')
+      .attr('d', path)
+      .attr('vector-effect', 'non-scaling-stroke')
+      .style('fill', fillFn)
+      .style('stroke', backgroundColor)
+      .style('stroke-width', strokeWeight)
+      .on('mouseover', mouseover)
+      .on('mouseout', mouseout)
+      .on('click', clicked);
+
+});
+
+// Get neighborhood name
+function nameFn(d){
+  return d && d.properties ? d.properties.NOMBRE_DPT : null;
+}
+
+// Get neighborhood name
+function nameFn(d){
+  return d && d.properties ? d.properties.neighborhoods : null;
+}
+
+
+// Get neighborhood name length
+function nameLength(d){
+  var n = nameFn(d);
+  return n ? n.length : 0;
+}
+
+// Get neighborhood color
+function fillFn(d){
+  //nameLength(d)
+  return color(getDistFromMellon(d))
+}
+
+// Get the approx distance of each neighborhood form CMU
+function getDistFromMellon(d){
+  center = path.centroid(d)
+  var distFromMellon = rangeFactor/(Math.abs(525 - center[0]) + Math.abs(220 - center[1]))
+  return distFromMellon
+}
+
+// When clicked, zoom in
+function clicked(d) {
+  var x, y, k;
+
+  // Compute centroid of the selected path
+  if (d && centered !== d) {
+    var centroid = path.centroid(d);
+    x = centroid[0];
+    y = centroid[1];
+    k = 4;
+    centered = d;
+  } else {
+    x = width / 2;
+    y = height / 2;
+    k = 1;
+    centered = null;
+  }
+
+  // Highlight the clicked neighborhood
+  mapLayer.selectAll('path')
+    .style('fill', function(d){return centered && d===centered ? selectedColor : fillFn(d);});
+
+  // Zoom
+  g.transition()
+    .duration(750)
+    .attr('transform', 'translate(' + width / 2 + ',' + height / 2 + ')scale(' + k + ')translate(' + -x + ',' + -y + ')');
+}
+
+function mouseover(d){
+  // Highlight hovered neighborhood
+  d3.select(this)
+    .style('fill', mouseOverColor)
+
+  // Draw effects
+  textArt(nameFn(d), d);
+}
+
+function mouseout(d){
+  // Reset neighborhood color
+  mapLayer.selectAll('path')
+    .style('fill', function(d){return centered && d===centered ? selectedColor : fillFn(d);})
+
+  // Remove effect text
+  effectLayer.selectAll('text').transition()
+    .style('opacity', 0)
+    .remove();
+
+  // Clear neighborhood name
+  neighborhoodName.text('');
+}
+
+var BASE_FONT = "Lato";
+
+
+function textArt(text, d){
+  var fontFamily = BASE_FONT;
+
+  console.log(getDistFromMellon(d))
+
+  neighborhoodName
+    .style('font-family', fontFamily)
+    .text(text)
+    .style('fill', textColor(getDistFromMellon(d)));
+
+  // Use dummy text to compute actual width of the text
+  // getBBox() will return bounding box
+  dummyText
+    .style('font-family', fontFamily)
+    .text(text);
+  var bbox = dummyText.node().getBBox();
+
+  var textWidth = bbox.width;
+  var textHeight = bbox.height;
+  var xGap = 3;
+  var yGap = 1;
+}
+
+</script>
