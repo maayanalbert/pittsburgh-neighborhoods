@@ -24,12 +24,12 @@ text{
 }
 
 text.neighborhood-text{
-  font-size: 25px;
+  font-size: 30px;
   font-weight: 400;
 }
 
 text.title-text{
-  font-size: 30px;
+  font-size: 20px;
   font-weight: 400;
 }
 
@@ -108,18 +108,26 @@ var dummyText = g.append('text')
 var neighborhoodName = g.append('text')
   .classed('neighborhood-text', true)
   .attr('x', 20)
-  .attr('y', 80)
+  .attr('y', 45)
   .attr('text-anchor', 'left');
 
-var title = g.append('text')
+var title1 = g.append('text')
   .classed('title-text', true)
-  .attr('x', 20)
-  .attr('y', 45)
-  .attr('text-anchor', 'left')
-  .text("Pittsburgh From A Student's Perspective")
+  .attr('x', 805)
+  .attr('y', 400)
+  .attr('text-anchor', 'right')
+  .text("Pittsburgh from a")
   .style('font-family', 'Lato')
-  .style('fill', '#616161');
+  .style('fill', '#A0A0A0');
 
+var title2 = g.append('text')
+  .classed('title-text', true)
+  .attr('x', 770)
+  .attr('y', 425)
+  .attr('text-anchor', 'right')
+  .text("student's perspective.")
+  .style('font-family', 'Lato')
+  .style('fill', '#A0A0A0');
 
 // var neighborhoodName = g.append('text')
 //   .classed('neighborhood-text', true)
